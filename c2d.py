@@ -277,6 +277,48 @@ def main(stdscr, homedir: str) -> None:
     curses = load_file(homedir, backup=True)
     c2d = Cursed2Do(stdscr, curses, homedir)
 
+def wrapper(func, /, *args, **kwds):
+    """
+    Modifying for color
+    Wrapper function that initializes curses and calls another function,
+    restoring normal keyboard/screen behavior on error.
+    The callable object 'func' is then passed the main window 'stdscr'
+    as its first argument, followed by any other arguments passed to
+    wrapper().
+    """
+
+    try:
+        # Initialize curses
+        stdscr = crs.initscr()
+
+        # Turn off echoing of keys, and enter cbreak mode,
+        # where no buffering is performed on keyboard input
+        crs.noecho()
+        crs.cbreak()
+
+        # In keypad mode, escape sequences for special keys
+        # (like the cursor keys) will be interpreted and
+        # a special value like curses.KEY_LEFT will be returned
+        stdscr.keypad(1)
+
+        # Start color, too.  Harmless if the terminal doesn't have
+        # color; user can test with has_color() later on.  The try/catch
+        # works around a minor bit of over-conscientiousness in the curses
+        # module -- the error return from C start_color() is ignorable.
+        # try:
+        #     crs.start_color()
+        # except:
+        #     pass
+
+        return func(stdscr, *args, **kwds)
+    finally:
+        # Set everything back to normal
+        if 'stdscr' in locals():
+            stdscr.keypad(0)
+            crs.echo()
+            crs.nocbreak()
+            crs.endwin()
+
 if __name__ == "__main__":
     homedir: str = str(Path.home())
 
@@ -286,7 +328,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     if not args.lc:
-        crs.wrapper(main, args.homedir)
+        wrapper(main, args.homedir)
     elif args.lc:
         try:
             curses = load_file(args.homedir, False)
