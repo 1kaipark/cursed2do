@@ -9,6 +9,19 @@ from pathlib import Path
 
 from copy import deepcopy 
 
+
+# https://stackoverflow.com/questions/287871/how-do-i-print-colored-text-to-the-terminal
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 class Curse(object):
     def __init__(self, title: str, notes: str, priority: int) -> None:
         """this will be one task"""
@@ -247,14 +260,19 @@ class Cursed2Do(object):
 
             
 
-
-def main(stdscr, homedir: str) -> None:
+def load_file(homedir: str, backup: bool = False) -> None:
     curses: list[Curse | None] = []
     if os.path.exists(os.path.join(homedir, 'my.curses')):
         with open(os.path.join(homedir, 'my.curses'), 'rb') as h:
             curses = pickle.load(h)
-        shutil.copy(os.path.join(homedir, 'my.curses'), os.path.join(homedir, 'bak.curses'))
+        
+        if backup:
+            shutil.copy(os.path.join(homedir, 'my.curses'), os.path.join(homedir, 'bak.curses'))
 
+    return curses
+
+def main(stdscr, homedir: str) -> None:
+    curses = load_file(homedir, backup=True)
     c2d = Cursed2Do(stdscr, curses, homedir)
 
 if __name__ == "__main__":
@@ -262,9 +280,21 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="YOUR DAILY CURSES")
     parser.add_argument("homedir", type=str, default=homedir, help="path to my.curses")
-    args = parser.parse_args()
+    parser.add_argument('--lc', default=False, action=argparse.BooleanOptionalAction, help="use this to print a nice list of curses")
 
-    crs.wrapper(main, args.homedir)
+    args = parser.parse_args()
+    if not args.lc:
+        crs.wrapper(main, args.homedir)
+    elif args.lc:
+        curses = load_file(args.homedir, False)
+        urgent = [curse for curse in curses if curse.priority <= 3]
+        others = [curse for curse in curses if curse.priority > 3]
+
+        for curse in urgent:
+            print(bcolors.FAIL + "!! " + str(curse))
+
+        for curse in others:
+            print(bcolors.WARNING + str(curse))
     # stdscr = crs.initscr()
     # main(stdscr)
     
