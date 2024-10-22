@@ -5,6 +5,8 @@ import os
 import shutil 
 import time 
 
+from pathlib import Path
+
 from copy import deepcopy 
 
 class Curse(object):
@@ -23,9 +25,11 @@ class Curse(object):
 
 
 class Cursed2Do(object):
-    def __init__(self, stdscr, curses: list[Curse | None]) -> None:
+    def __init__(self, stdscr, curses: list[Curse | None], save_dir: str = os.getcwd()) -> None:
+        """doc string"""
         self.stdscr = stdscr
         self.curses = sorted(curses, key=lambda c: c.priority)
+        self.save_dir = save_dir
 
         self._curses_og = pickle.dumps(deepcopy(self.curses)) # keep the binary representation of self.curses in memory
 
@@ -57,7 +61,7 @@ class Cursed2Do(object):
             else:
                 self.stdscr.addstr(2 + idx, 2, f"{curse.priority} > {curse.title}")
     
-    def display_new_curse_menu(self, curse: Curse = Curse("", "", 0), title: str = "PLACE A NEW CURSE...") -> Curse:
+    def display_new_curse_menu(self) -> Curse:
         crs.curs_set(1) # display cursor 
         crs.echo()
 
@@ -65,30 +69,25 @@ class Cursed2Do(object):
 
         new_curse_menu = crs.newwin(9, menu_width, 2, 2)
         new_curse_menu.border()
-        new_curse_menu.addstr(1, 2, title, crs.A_BOLD)
+        new_curse_menu.addstr(1, 2, "PLACE A CURSE...", crs.A_BOLD)
         new_curse_menu.addstr(2, 2, "TITLE...")
-        new_curse_menu.addstr(3, 4, curse.title)
 
-        new_title = new_curse_menu.getstr(3, 4, menu_width - 12).decode("utf-8")
-        curse.title = new_title if len(new_title) > 0 else curse.title
+        title = new_curse_menu.getstr(3, 4, menu_width - 12).decode("utf-8")
 
         new_curse_menu.addstr(4, 2, "NOTES...")
-        new_curse_menu.addstr(5, 4, curse.notes)
-        new_notes = new_curse_menu.getstr(5, 4, menu_width - 12).decode("utf-8")
-        curse.notes = new_notes if len(new_notes) > 0 else curse.notes
+        notes = new_curse_menu.getstr(5, 4, menu_width - 12).decode("utf-8")
 
         new_curse_menu.addstr(6, 2, "PRIORITY...")
-        new_curse_menu.addstr(7, 4, str(curse.priority))
         curse_prio = new_curse_menu.getstr(7, 4, menu_width - 12).decode("utf-8")
         try:
-            curse.priority = int(curse_prio.strip()) if len(curse_prio) > 0 else curse.priority
+            curse_prio = int(curse_prio.strip()) if len(curse_prio) > 0 else curse.priority
 
         except ValueError:
-            curse.priority = 0
+            curse_prio = 0
 
         crs.noecho()
         crs.curs_set(0)
-        return curse
+        return Curse(title, notes, curse_prio)
     
     def display_note(self) -> None:
         self.prompt(self.curses[self.selected].notes)
@@ -103,7 +102,44 @@ class Cursed2Do(object):
         self.user_is_cursed = len(self.curses) != 0
 
     def edit_item(self) -> None:
-        curse = self.display_new_curse_menu(self.curses[self.selected], "EDIT CURSE...")
+        item = self.curses[self.selected]
+        crs.curs_set(1) # display cursor 
+        crs.echo()
+
+        menu_width = self.w - 4
+
+        edit_menu = crs.newwin(9, menu_width, 2, 2)
+        edit_menu.border()
+        edit_menu.addstr(1, 2, "EDIT CURSE... (leave blank to leave unchanged)", crs.A_BOLD)
+
+        edit_menu.addstr(2, 2, "TITLE...")
+        edit_menu.addstr(3, 4, item.title + ' -> ')
+        
+        new_title = edit_menu.getstr(3, len(item.title) + 8, menu_width - 12).decode("utf-8")
+
+
+        edit_menu.addstr(4, 2, "NOTES...")
+        edit_menu.addstr(5, 4, item.notes + ' -> ')
+        new_notes = edit_menu.getstr(5, len(item.notes) + 8, menu_width - 12).decode("utf-8")
+
+        edit_menu.addstr(6, 2, "PRIORITY...")
+        edit_menu.addstr(7, 4, str(item.priority) + ' -> ')
+        new_prio = edit_menu.getstr(7, 9, menu_width - 12).decode("utf-8")
+
+        new_title = item.title if len(new_title) == 0 else new_title
+        new_notes = item.notes if len(new_notes) == 0 else new_notes
+        new_prio = item.priority if len(str(new_prio)) == 0 else new_prio
+        try:
+            new_prio = int(new_prio.strip())
+
+        except Exception:
+            new_prio = item.priority
+
+        crs.noecho()
+        crs.curs_set(0)
+        curse = Curse(new_title, new_notes, new_prio)
+
+        self.stdscr.refresh()
         self.curses[self.selected] = curse
 
 
@@ -171,8 +207,6 @@ class Cursed2Do(object):
                 self.selected -= 1
             elif key == crs.KEY_DOWN and self.selected < len(self.curses) - 1:
                 self.selected += 1
-            elif key == 10:  # Enter key
-                self.display_curse_notes()
 
             elif key == ord('q'):
                 if self._curses_og == pickle.dumps(self.curses): # compare serialized versions
@@ -187,6 +221,7 @@ class Cursed2Do(object):
 
             elif key == ord('c'):
                 curse: Curse = self.display_new_curse_menu()
+                self.stdscr.refresh()
                 self.new_curse(curse)
 
             elif key == ord('-'):
@@ -205,7 +240,7 @@ class Cursed2Do(object):
                 self.undo_lift()
 
             elif key == ord('w'):
-                with open('my.curses', 'wb') as h:
+                with open(os.path.join(self.save_dir, 'my.curses'), 'wb') as h:
                     pickle.dump(self.curses, h)
                 self.alert('saved to file...')
                 self._curses_og = pickle.dumps(deepcopy(self.curses))
@@ -213,17 +248,23 @@ class Cursed2Do(object):
             
 
 
-def main(stdscr) -> None:
+def main(stdscr, homedir: str) -> None:
     curses: list[Curse | None] = []
-    if os.path.exists('my.curses'):
-        with open('my.curses', 'rb') as h:
+    if os.path.exists(os.path.join(homedir, 'my.curses')):
+        with open(os.path.join(homedir, 'my.curses'), 'rb') as h:
             curses = pickle.load(h)
-        shutil.copy('my.curses', 'bak.curses')
+        shutil.copy(os.path.join(homedir, 'my.curses'), os.path.join(homedir, 'bak.curses'))
 
-    c2d = Cursed2Do(stdscr, curses)
+    c2d = Cursed2Do(stdscr, curses, homedir)
 
 if __name__ == "__main__":
-    crs.wrapper(main)
+    homedir: str = str(Path.home())
+
+    parser = argparse.ArgumentParser(description="YOUR DAILY CURSES")
+    parser.add_argument("homedir", type=str, default=homedir, help="path to my.curses")
+    args = parser.parse_args()
+
+    crs.wrapper(main, args.homedir)
     # stdscr = crs.initscr()
     # main(stdscr)
     
