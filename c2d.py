@@ -20,7 +20,9 @@ class bcolors:
     FAIL = '\033[91m'
     ENDC = '\033[0m'
     BOLD = '\033[1m'
+    NOTBOLD = '\033[22m'
     UNDERLINE = '\033[4m'
+    NOTUNDERLINE = '\033[0m'
 
 class Curse(object):
     def __init__(self, title: str, notes: str, priority: int) -> None:
@@ -291,10 +293,10 @@ if __name__ == "__main__":
         others = [curse for curse in curses if curse.priority > 3]
 
         for curse in urgent:
-            print(bcolors.FAIL + "!! " + str(curse))
+            print(bcolors.FAIL + bcolors.BOLD + str(curse))
 
         for curse in others:
-            print(bcolors.WARNING + str(curse))
+            print(bcolors.NOTBOLD + bcolors.WARNING + str(curse))
     # stdscr = crs.initscr()
     # main(stdscr)
     
