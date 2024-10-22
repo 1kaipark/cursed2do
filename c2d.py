@@ -57,7 +57,7 @@ class Cursed2Do(object):
             else:
                 self.stdscr.addstr(2 + idx, 2, f"{curse.priority} > {curse.title}")
     
-    def display_new_curse_menu(self) -> Curse:
+    def display_new_curse_menu(self, curse: Curse = Curse("", "", 0), title: str = "PLACE A NEW CURSE...") -> Curse:
         crs.curs_set(1) # display cursor 
         crs.echo()
 
@@ -65,28 +65,30 @@ class Cursed2Do(object):
 
         new_curse_menu = crs.newwin(9, menu_width, 2, 2)
         new_curse_menu.border()
-        new_curse_menu.addstr(1, 2, "PLACE A NEW CURSE...", crs.A_BOLD)
+        new_curse_menu.addstr(1, 2, title, crs.A_BOLD)
         new_curse_menu.addstr(2, 2, "TITLE...")
-        new_curse_menu.refresh()
+        new_curse_menu.addstr(3, 4, curse.title)
 
-        curse_title = new_curse_menu.getstr(3, 4, menu_width - 12).decode("utf-8")
+        new_title = new_curse_menu.getstr(3, 4, menu_width - 12).decode("utf-8")
+        curse.title = new_title if len(new_title) > 0 else curse.title
 
         new_curse_menu.addstr(4, 2, "NOTES...")
-        new_curse_menu.refresh()
-        curse_notes = new_curse_menu.getstr(5, 4, menu_width - 12).decode("utf-8")
+        new_curse_menu.addstr(5, 4, curse.notes)
+        new_notes = new_curse_menu.getstr(5, 4, menu_width - 12).decode("utf-8")
+        curse.notes = new_notes if len(new_notes) > 0 else curse.notes
 
         new_curse_menu.addstr(6, 2, "PRIORITY...")
+        new_curse_menu.addstr(7, 4, str(curse.priority))
         curse_prio = new_curse_menu.getstr(7, 4, menu_width - 12).decode("utf-8")
-        
         try:
-            curse_prio = int(curse_prio.strip())
+            curse.priority = int(curse_prio.strip()) if len(curse_prio) > 0 else curse.priority
 
         except ValueError:
-            curse_prio = 0
+            curse.priority = 0
 
         crs.noecho()
         crs.curs_set(0)
-        return Curse(curse_title, curse_notes, curse_prio)
+        return curse
     
     def display_note(self) -> None:
         self.prompt(self.curses[self.selected].notes)
@@ -99,6 +101,10 @@ class Cursed2Do(object):
             pass # given when popping empty list, this means all have been un-lifted
             
         self.user_is_cursed = len(self.curses) != 0
+
+    def edit_item(self) -> None:
+        curse = self.display_new_curse_menu(self.curses[self.selected], "EDIT CURSE...")
+        self.curses[self.selected] = curse
 
 
     def alert(self, text: str, duration: int = 1) -> None:
@@ -139,8 +145,9 @@ class Cursed2Do(object):
         legend_win.addstr(1, legend_width // 4, "[l] LIFT CURSE")
         legend_win.addstr(2, legend_width // 4, "[↑/↓] CHANGE SELECTION")
         legend_win.addstr(1, 2*legend_width // 4, "[→] READ NOTE")
-        legend_win.addstr(2, 2*legend_width // 4, "[u] UNDO LIFT")
-        legend_win.addstr(1, 3*legend_width // 4, "[w] SAVE TO DISK")
+        legend_win.addstr(2, 2*legend_width // 4, "[e] EDIT ITEM")
+        legend_win.addstr(1, 3*legend_width // 4, "[u] UNDO LIFT")
+        legend_win.addstr(1, 3*legend_width // 4, "[w] WRITE TO DISK")
         legend_win.refresh()
 
 
@@ -190,6 +197,9 @@ class Cursed2Do(object):
 
             elif key == crs.KEY_RIGHT:
                 self.display_note()
+
+            elif key == ord('e'):
+                self.edit_item()
 
             elif key == ord('u'):
                 self.undo_lift()
