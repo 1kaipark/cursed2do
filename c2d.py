@@ -92,7 +92,14 @@ class Cursed2Do(object):
         self.prompt(self.curses[self.selected].notes)
 
     def undo_lift(self) -> None:
-        self.curses.append(self.recently_lifted[-1])
+        try:
+            self.curses.append(self.recently_lifted.pop(-1))
+            
+        except IndexError:
+            pass # given when popping empty list, this means all have been un-lifted
+            
+        self.user_is_cursed = len(self.curses) != 0
+
 
     def alert(self, text: str, duration: int = 1) -> None:
         msg = crs.newwin(5, 20, 2, 2)
