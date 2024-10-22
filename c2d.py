@@ -113,17 +113,17 @@ class Cursed2Do(object):
         edit_menu.addstr(1, 2, "EDIT CURSE... (leave blank to leave unchanged)", crs.A_BOLD)
 
         edit_menu.addstr(2, 2, "TITLE...")
-        edit_menu.addstr(3, 4, item.title + ' -> ')
+        edit_menu.addstr(3, 4, item.title + ' -> _')
         
         new_title = edit_menu.getstr(3, len(item.title) + 8, menu_width - 12).decode("utf-8")
 
 
         edit_menu.addstr(4, 2, "NOTES...")
-        edit_menu.addstr(5, 4, item.notes + ' -> ')
+        edit_menu.addstr(5, 4, item.notes + ' -> _')
         new_notes = edit_menu.getstr(5, len(item.notes) + 8, menu_width - 12).decode("utf-8")
 
         edit_menu.addstr(6, 2, "PRIORITY...")
-        edit_menu.addstr(7, 4, str(item.priority) + ' -> ')
+        edit_menu.addstr(7, 4, str(item.priority) + ' -> _')
         new_prio = edit_menu.getstr(7, 9, menu_width - 12).decode("utf-8")
 
         new_title = item.title if len(new_title) == 0 else new_title
