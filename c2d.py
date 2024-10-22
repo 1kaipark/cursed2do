@@ -288,15 +288,19 @@ if __name__ == "__main__":
     if not args.lc:
         crs.wrapper(main, args.homedir)
     elif args.lc:
-        curses = load_file(args.homedir, False)
-        urgent = [curse for curse in curses if curse.priority <= 3]
-        others = [curse for curse in curses if curse.priority > 3]
+        try:
+            curses = load_file(args.homedir, False)
+        except Exception as e:
+            pass
+        if len(curses) > 0:
+            urgent = [curse for curse in curses if curse.priority <= 3]
+            others = [curse for curse in curses if curse.priority > 3]
 
-        for curse in urgent:
-            print(bcolors.FAIL + bcolors.BOLD + str(curse))
+            for curse in urgent:
+                print(bcolors.FAIL + bcolors.BOLD + str(curse))
 
-        for curse in others:
-            print(bcolors.NOTBOLD + bcolors.WARNING + str(curse))
+            for curse in others:
+                print(bcolors.NOTBOLD + bcolors.WARNING + str(curse))
     # stdscr = crs.initscr()
     # main(stdscr)
     
